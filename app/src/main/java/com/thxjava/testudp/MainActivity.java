@@ -21,8 +21,6 @@ public class MainActivity extends AppCompatActivity {
     private DatagramSocket socket;
     private DatagramPacket send_packet, receive_packet;
 
-    String wifi = "hezy-zh\0qaz!@#wsx\0";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,11 +32,7 @@ public class MainActivity extends AppCompatActivity {
          * 向服务器端发送数据
          */
         new UDPIMTask().execute();
-        Toast.makeText(this, "开始发送数据", Toast.LENGTH_SHORT).show();
 
-//        textView.setText(toHexString(wifi));
-
-        System.out.println(Arrays.toString(toHexString(wifi)));
     }
 
     class UDPIMTask extends AsyncTask<Void, Integer, String> {
@@ -139,6 +133,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         if (socket != null)
-        socket.close();
+            socket.close();
     }
 }
