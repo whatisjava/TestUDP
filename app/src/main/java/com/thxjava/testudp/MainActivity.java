@@ -1,6 +1,7 @@
 package com.thxjava.testudp;
 
 import android.annotation.SuppressLint;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
@@ -28,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
 
     private DatagramSocket socket;
     private DatagramPacket send_packet, receive_packet;
+
+    private WifiManager wifiManager;
 
     @SuppressLint("HandlerLeak")
     Handler handler = new Handler() {
@@ -64,6 +67,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        wifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+
         textView = findViewById(R.id.text_view);
         dianText = findViewById(R.id.dian_liang);
 
@@ -81,8 +86,92 @@ public class MainActivity extends AppCompatActivity {
         /*
          * 向服务器端发送数据
          */
-        new SenderTask().execute();
+//        new SenderTask().execute();
 
+        new SendCmdTask().execute();
+    }
+
+
+    private byte[] registerHostAddress(String ip){
+        byte[] cmd = new byte[11];
+        cmd[0] = 0x55;
+        cmd[1] = 0x00;
+        cmd[2] = 0x33;
+        cmd[3] = 0x06;
+        String[] list = ip.split(".");
+        for (String str : list) {
+            System.out.println("host ip address---->" + str);
+        }
+        cmd[4] = (byte) Integer.parseInt(list[0]);
+        cmd[5] = (byte) Integer.parseInt(list[1]);
+        cmd[6] = (byte) Integer.parseInt(list[2]);
+        cmd[7] = (byte) Integer.parseInt(list[3]);
+        cmd[8] = 0x40;
+        cmd[9] = (byte) 0xE3;
+
+        byte sum = 0;
+        for (int i = 0; i < 10; i++) {
+            sum += cmd[i];
+        }
+        cmd[10] = sum;
+        return cmd;
+    }
+
+    class SendCmdTask extends AsyncTask<Integer, Integer, String> {
+
+        @Override
+        protected String doInBackground(Integer... params) {
+            try {
+                // 1.定义服务器的地址、端口号、发送数据
+                InetAddress address = InetAddress.getByName("192.168.10.5");
+                int port = 16611;
+
+                String hostIP = intToIp(wifiManager.getDhcpInfo().ipAddress);
+                System.out.println("host ip address--->" + hostIP);
+
+                byte[] send_data = registerHostAddress(hostIP);
+
+                // 2.创建数据报，包含发送的数据信息
+                send_packet = new DatagramPacket(send_data, send_data.length, address, port);
+
+                // 3.创建DatagramSocket对象
+                socket = new DatagramSocket(8888);
+
+                // 4.向服务器端发送数据报
+                socket.send(send_packet);
+
+                // 1.创建数据报，用于接收服务器端响应的数据
+                byte[] receive_data = new byte[1024];
+                receive_packet = new DatagramPacket(receive_data, receive_data.length);
+
+                // 2.接收服务器响应的数据
+                System.out.println("等待接收数据");
+                socket.receive(receive_packet);
+                System.out.println("接收到数据了");
+
+                // 3.读取数据
+                String reply = new String(receive_data, 0, receive_packet.getLength());
+                System.out.println("我是客户端，服务器说：" + reply);
+
+                return reply;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            Toast.makeText(MainActivity.this, "返回结果" + s, Toast.LENGTH_SHORT).show();
+
+            // 4.关闭资源
+            socket.close();
+        }
+    }
+
+
+    private String intToIp(int paramInt) {
+        return (paramInt & 0xFF) + "." + (0xFF & paramInt >> 8) + "." + (0xFF & paramInt >> 16) + "." + (0xFF & paramInt >> 24);
     }
 
     class SenderTask extends AsyncTask<Void, Integer, String> {
@@ -91,7 +180,7 @@ public class MainActivity extends AppCompatActivity {
         protected String doInBackground(Void... voids) {
             try {
                 // 1.定义服务器的地址、端口号、发送数据
-                InetAddress address = InetAddress.getByName("192.168.31.1");
+                InetAddress address = InetAddress.getByName("192.168.10.13");
                 int port = 16611;
 
                 byte[] send_data1 = {85, 0, 90, 18, 104, 101, 122, 121, 45, 122, 104, 0, 113, 97, 122, 33, 64, 35, 119, 115, 120, 0};
@@ -112,10 +201,19 @@ public class MainActivity extends AppCompatActivity {
                 send_packet = new DatagramPacket(reset, reset.length, address, port);
                 socket.send(send_packet);
 
+                // 1.创建数据报，用于接收服务器端响应的数据
+                byte[] receive_data = new byte[1024];
+                receive_packet = new DatagramPacket(receive_data, receive_data.length);
 
+                // 2.接收服务器响应的数据
+                System.out.println("等待接收点对点数据");
+                socket.receive(receive_packet);
+                System.out.println("接收到点对点数据了");
 
-
-                return "success";
+                // 3.读取数据
+                String message = new String(receive_data, 0, receive_packet.getLength());
+                System.out.println("点对点信息：" + message);
+                return message;
             } catch (IOException e) {
                 e.printStackTrace();
             }
