@@ -1,6 +1,7 @@
 package com.thxjava.testudp;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -54,13 +55,15 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    private byte[] reverseByteArray(byte[] bytes){
+    private byte[] reverseByteArray(byte[] bytes) {
         byte[] result = new byte[bytes.length];
         for (int i = 0; i < bytes.length; i++) {
-            result[i] = bytes[bytes.length -1 - i];
+            result[i] = bytes[bytes.length - 1 - i];
         }
         return result;
     }
+
+    private Intent intent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
          * 接收广播数据
          */
 //        new BroadcastReceiverTask().execute();
-        new BroadcastReceiverThread().start();
+//        new BroadcastReceiverThread().start();
 
         /*
          * 接收点对点数据
@@ -88,11 +91,28 @@ public class MainActivity extends AppCompatActivity {
          */
 //        new SenderTask().execute();
 
-        new SendCmdTask().execute();
+//        new SendCmdTask().execute();
+//        getByte("192.168.10.19");
+
+        intent = new Intent(this, MultiplierService.class);
+        startService(intent);
     }
 
+    private void getByte(String hostIp) {
+        byte[] bytes = new byte[4];
+        int pos1 = hostIp.indexOf(".");
+        int pos2 = hostIp.indexOf(".", pos1 + 1);
+        int pos3 = hostIp.indexOf(".", pos2 + 1);
 
-    private byte[] registerHostAddress(String ip){
+        bytes[0] = (byte) Integer.parseInt(hostIp.substring(0, pos1));
+        bytes[1] = (byte) Integer.parseInt(hostIp.substring(pos1 + 1, pos2));
+        bytes[2] = (byte) Integer.parseInt(hostIp.substring(pos2 + 1, pos3));
+        bytes[3] = (byte) Integer.parseInt(hostIp.substring(pos3 + 1));
+
+        System.out.println("getbyte........." + bytes[0]);
+    }
+
+    private byte[] registerHostAddress(String ip) {
         byte[] cmd = new byte[11];
         cmd[0] = 0x55;
         cmd[1] = 0x00;
@@ -169,7 +189,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     private String intToIp(int paramInt) {
         return (paramInt & 0xFF) + "." + (0xFF & paramInt >> 8) + "." + (0xFF & paramInt >> 16) + "." + (0xFF & paramInt >> 24);
     }
@@ -240,7 +259,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    class P2PReceiverTask extends AsyncTask<String, Integer, String>{
+    class P2PReceiverTask extends AsyncTask<String, Integer, String> {
 
         private DatagramSocket socket;
 
@@ -297,7 +316,7 @@ public class MainActivity extends AppCompatActivity {
                     Message message = new Message();
                     if (receive_data[2] == 7) {
                         message.what = 7;
-                    } else if(receive_data[2] == 50){
+                    } else if (receive_data[2] == 50) {
                         message.what = 50;
                     }
                     // 3.读取数据
@@ -314,7 +333,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    class BroadcastReceiverTask extends AsyncTask<String, Integer, String>{
+    class BroadcastReceiverTask extends AsyncTask<String, Integer, String> {
 
         private DatagramSocket socket;
 
@@ -365,7 +384,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopService(intent);
         if (socket != null)
             socket.close();
     }
+
 }
