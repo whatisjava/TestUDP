@@ -133,7 +133,6 @@ public class MultiplierService extends Service {
                     HeartBeat heartBeat = new HeartBeat();
                     heartBeat.setCode(receive_data[2]);
                     deviceIp = p2p_receive_packet.getAddress().getHostAddress();
-                    System.out.println("定点脑电设备IP--->" + deviceIp);
                     heartBeat.setDeviceIp(deviceIp);
 
                     byte[] msg = new byte[receive_data[3]];
@@ -143,6 +142,7 @@ public class MultiplierService extends Service {
                     Message message = new Message();
                     message.obj = heartBeat;
                     handler.sendMessage(message);
+                    System.out.println("定点接收消息内容---->" + heartBeat);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
